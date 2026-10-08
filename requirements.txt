@@ -1,2 +1,6 @@
 numpy
 pillow
+# --pockets only
+scipy
+rembg
+onnxruntime
