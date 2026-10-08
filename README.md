@@ -1,5 +1,14 @@
 # ai-alpha-bg
 
+<p>
+  <img src="example/white.png" width="32%" alt="Cartoon chef generated on white">
+  <img src="example/black.png" width="32%" alt="The same chef repainted on black">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="example/alpha_checker.png">
+    <img src="example/alpha.png" width="32%" alt="The chef with a transparent background">
+  </picture>
+</p>
+
 Image models can't output transparent backgrounds, and cutting the figure out of a white background breaks wherever the figure itself is white: eyes, teeth, pale cloth.
 
 This tool takes a different route. Generate the image on white, then have the model repaint the same image on black. Comparing the two shows exactly how much background is behind every pixel:
@@ -8,7 +17,7 @@ This tool takes a different route. Generate the image on white, then have the mo
 - **Background:** white in one, black in the other, so it is transparent.
 - **In between,** like soft edges and hair: partly transparent, by exactly how much it changed.
 
-No colour is treated as background, so white eyes stay white.
+No colour is treated as background, so white parts of the figure stay opaque, like the chef's hat, jacket and teeth above.
 
 ## Steps
 
@@ -24,6 +33,7 @@ No colour is treated as background, so white eyes stay white.
 pip install -r requirements.txt
 python matte.py white.png black.png out.png
 python matte.py white.png black.png out.png --pockets
+python matte.py example/white.png example/black.png out.png
 python test_matte.py
 ```
 
