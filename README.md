@@ -48,7 +48,7 @@ Everything depends on this step. The black image must show the same figure as th
 - **Works:** pass the white image to the model as a reference image and ask for the same thing on black, with the prompt `the same subject, unchanged, on a solid black background`.
 - **Does not work:** generating the black image separately with the same prompt and seed. Even a fixed seed gives slightly different images, and every pixel that moved comes out wrong.
 
-**Tested with** FLUX.2 klein 4B, the white image as its reference image, the prompt above, and a style LoRA at 0.4 strength. A strong LoRA can redraw the figure instead of keeping it, so keep the strength low for this step.
+**Tested with** FLUX.2 klein 4B, the white image as its reference image and the prompt above. The example pair ran without a LoRA; in a pipeline with a style LoRA, 0.3 strength held the figure. A strong LoRA can redraw the figure instead of keeping it, so keep the strength low for this step.
 
 **Not tested** with other editing models. Models that redraw the whole image rather than edit it, which includes most hosted editors, are likely to move the figure. The drift check tells you.
 
