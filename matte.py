@@ -7,7 +7,7 @@
 import argparse
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 # Cw - Cb = (1 - a) * 255. Exact where the model repainted the background, and no colour is keyed,
 # so nothing in the art can be mistaken for background. Two renders agree to a few counts rather
@@ -28,11 +28,31 @@ VETO_EDGE = 512
 # which a figure's eyes and teeth never reach.
 POCKET_MIN_AREA = 0.001
 
+# The figure must be identical in both renders. A figure pixel that moved further than the solve
+# tolerates was redrawn rather than kept, and its alpha is wrong. Pixels this close to the outline
+# are skipped, since anti-aliased edges change between renders by design. Lines inside the figure
+# still re-render a fraction of a pixel apart: the example pair reads 1.5% from those alone, and
+# the same pair with the black render shifted by one pixel reads 4.6%.
+DRIFT_TOLERANCE = (1 - SOLID) * 255
+DRIFT_EDGE = 3
+DRIFT_WARN = 0.03
+
 
 def solve_alpha(lit: np.ndarray, dark: np.ndarray) -> np.ndarray:
     alpha = np.clip(1 - (lit - dark).mean(axis=2) / 255, 0, 1)
     alpha = np.where(alpha > SOLID, 1.0, alpha)
     return np.where(alpha < CLEAR, 0.0, alpha)
+
+
+def drift(lit: np.ndarray, dark: np.ndarray) -> float:
+    "Share of figure pixels, outline excluded, that changed between the two renders."
+    background = (lit.min(axis=2) > POCKET) & (dark.max(axis=2) < 255 - POCKET)
+    figure = Image.fromarray((~background).astype(np.uint8) * 255, "L")
+    inside = np.array(figure.filter(ImageFilter.MinFilter(2 * DRIFT_EDGE + 1))) > 127
+    if not inside.any():
+        return 0.0
+    changed = np.abs(lit - dark).mean(axis=2) > DRIFT_TOLERANCE
+    return float(changed[inside].mean())
 
 
 def gaps(white: Image.Image, lit: np.ndarray, dark: np.ndarray, session) -> np.ndarray:
@@ -86,11 +106,18 @@ def main() -> None:
 
         session = rembg.new_session(VETO)
 
-    result = matte(Image.open(args.white), Image.open(args.black), session)
+    white, black = Image.open(args.white), Image.open(args.black)
+    result = matte(white, black, session)
     result.save(args.out)
 
     alpha = np.array(result)[:, :, 3]
-    print(f"clear={100 * (alpha == 0).mean():.1f}%  partial={100 * ((alpha > 0) & (alpha < 255)).mean():.2f}%")
+    moved = drift(np.array(white.convert("RGB"), dtype=float), np.array(black.convert("RGB"), dtype=float))
+    print(
+        f"clear={100 * (alpha == 0).mean():.1f}%  partial={100 * ((alpha > 0) & (alpha < 255)).mean():.2f}%"
+        f"  drift={100 * moved:.2f}%"
+    )
+    if moved > DRIFT_WARN:
+        print("warning: the figure changed between the renders, so its alpha is wrong. See Drift in the README.")
 
 
 if __name__ == "__main__":

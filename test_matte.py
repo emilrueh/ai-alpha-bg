@@ -6,7 +6,7 @@
 import numpy as np
 from PIL import Image
 
-from matte import matte
+from matte import DRIFT_WARN, drift, matte
 
 SIZE = 64
 
@@ -35,6 +35,13 @@ def main() -> None:
     assert abs(result[15, 32, 3] - 128) <= 1, "rim must keep its partial alpha"
     assert abs(result[15, 32, :3] - (60, 40, 30)).max() <= 2, "rim colour must carry no white spill"
     assert result[2, 2, 3] == 0, "background must be clear"
+
+    lit = np.array(render(truth, 255), dtype=float)
+    dark = np.array(render(truth, 0), dtype=float)
+    assert drift(lit, dark) == 0, "an unchanged figure must show no drift"
+    redrawn = dark.copy()
+    redrawn[20:44, 20:44] = (110, 90, 80)
+    assert drift(lit, redrawn) > DRIFT_WARN, "a figure redrawn in the black render must warn"
     print("ok")
 
 
